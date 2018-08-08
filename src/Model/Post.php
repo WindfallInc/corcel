@@ -1,18 +1,15 @@
 <?php
-
 namespace Corcel\Model;
-
-use Corcel\Concerns\AdvancedCustomFields;
-use Corcel\Concerns\Aliases;
-use Corcel\Concerns\CustomTimestamps;
-use Corcel\Concerns\MetaFields;
-use Corcel\Concerns\OrderScopes;
-use Corcel\Concerns\Shortcodes;
 use Corcel\Corcel;
 use Corcel\Model;
 use Corcel\Model\Builder\PostBuilder;
 use Corcel\Model\Meta\ThumbnailMeta;
-
+use Corcel\Concerns\Aliases;
+use Corcel\Concerns\OrderScopes;
+use Corcel\Concerns\CustomTimestamps;
+use Corcel\Concerns\AdvancedCustomFields;
+use Corcel\Concerns\MetaFields;
+use Corcel\Concerns\Shortcodes;
 /**
  * Class Post
  *
@@ -31,32 +28,26 @@ class Post extends Model
 
     const CREATED_AT = 'post_date';
     const UPDATED_AT = 'post_modified';
-
     /**
      * @var string
      */
     protected $table = 'posts';
-
     /**
      * @var string
      */
     protected $primaryKey = 'ID';
-
     /**
      * @var array
      */
     protected $dates = ['post_date', 'post_date_gmt', 'post_modified', 'post_modified_gmt'];
-
     /**
      * @var array
      */
     protected $with = ['meta'];
-
     /**
      * @var array
      */
     protected static $postTypes = [];
-
     /**
      * @var array
      */
@@ -69,7 +60,6 @@ class Post extends Model
         'pinged',
         'post_content_filtered',
     ];
-
     /**
      * @var array
      */
@@ -92,7 +82,6 @@ class Post extends Model
         'keywords',
         'keywords_str',
     ];
-
     /**
      * @var array
      */
@@ -110,7 +99,6 @@ class Post extends Model
         'updated_at' => 'post_modified',
         'status' => 'post_status',
     ];
-
     /**
      * @param array $attributes
      * @param null $connection
@@ -119,18 +107,13 @@ class Post extends Model
     public function newFromBuilder($attributes = [], $connection = null)
     {
         $model = $this->getPostInstance((array)$attributes);
-
         $model->exists = true;
-
         $model->setRawAttributes((array)$attributes, true);
-
         $model->setConnection(
             $connection ?: $this->getConnectionName()
         );
-
         return $model;
     }
-
     /**
      * @param array $attributes
      * @return array
@@ -138,7 +121,6 @@ class Post extends Model
     protected function getPostInstance(array $attributes)
     {
         $class = static::class;
-
         // Check if it should be instantiated with a custom post type class
         if (isset($attributes['post_type']) && $attributes['post_type']) {
             if (isset(static::$postTypes[$attributes['post_type']])) {
@@ -150,10 +132,8 @@ class Post extends Model
                 }
             }
         }
-
         return new $class();
     }
-
     /**
      * @param \Illuminate\Database\Query\Builder $query
      * @return PostBuilder
@@ -162,7 +142,6 @@ class Post extends Model
     {
         return new PostBuilder($query);
     }
-
     /**
      * @return PostBuilder
      */
@@ -172,7 +151,6 @@ class Post extends Model
             parent::newQuery()->type($this->postType) :
             parent::newQuery();
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
@@ -181,7 +159,6 @@ class Post extends Model
         return $this->hasOne(ThumbnailMeta::class, 'post_id')
             ->where('meta_key', '_thumbnail_id');
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
@@ -191,7 +168,6 @@ class Post extends Model
             Taxonomy::class, 'term_relationships', 'object_id', 'term_taxonomy_id'
         );
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
@@ -199,7 +175,6 @@ class Post extends Model
     {
         return $this->hasMany(Comment::class, 'comment_post_ID');
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
@@ -207,7 +182,6 @@ class Post extends Model
     {
         return $this->belongsTo(User::class, 'post_author');
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
@@ -215,7 +189,6 @@ class Post extends Model
     {
         return $this->belongsTo(Post::class, 'post_parent');
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
@@ -223,7 +196,6 @@ class Post extends Model
     {
         return $this->hasMany(Post::class, 'post_parent');
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
@@ -232,7 +204,6 @@ class Post extends Model
         return $this->hasMany(Post::class, 'post_parent')
             ->where('post_type', 'attachment');
     }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
@@ -241,7 +212,6 @@ class Post extends Model
         return $this->hasMany(Post::class, 'post_parent')
             ->where('post_type', 'revision');
     }
-
     /**
      * Whether the post contains the term or not.
      *
@@ -254,7 +224,6 @@ class Post extends Model
         return isset($this->terms[$taxonomy]) &&
             isset($this->terms[$taxonomy][$term]);
     }
-
     /**
      * @param string $postType
      */
@@ -262,7 +231,6 @@ class Post extends Model
     {
         $this->postType = $postType;
     }
-
     /**
      * @return string
      */
@@ -270,7 +238,6 @@ class Post extends Model
     {
         return $this->postType;
     }
-
     /**
      * @return string
      */
@@ -278,7 +245,17 @@ class Post extends Model
     {
         return $this->stripShortcodes($this->post_content);
     }
-
+    /**
+     * Gets the formatted content attribute.
+     *
+     * @return string
+     */
+    public function theContent()
+    {
+        $postFormatter = new PostFormatter();
+        $content = $postFormatter->process($this->post_content);
+        return $this->stripShortcodes($content);
+    }
     /**
      * @return string
      */
@@ -286,7 +263,6 @@ class Post extends Model
     {
         return $this->stripShortcodes($this->post_excerpt);
     }
-
     /**
      * Gets the featured image if any
      * Looks in meta the _thumbnail_id field.
@@ -299,7 +275,6 @@ class Post extends Model
             return $this->thumbnail->attachment->guid;
         }
     }
-
     /**
      * Gets all the terms arranged taxonomy => terms[].
      *
@@ -316,7 +291,6 @@ class Post extends Model
             });
         })->toArray();
     }
-
     /**
      * Gets the first term of the first taxonomy found.
      *
@@ -325,19 +299,15 @@ class Post extends Model
     public function getMainCategoryAttribute()
     {
         $mainCategory = 'Uncategorized';
-
         if (!empty($this->terms)) {
             $taxonomies = array_values($this->terms);
-
             if (!empty($taxonomies[0])) {
                 $terms = array_values($taxonomies[0]);
                 $mainCategory = $terms[0];
             }
         }
-
         return $mainCategory;
     }
-
     /**
      * Gets the keywords as array.
      *
@@ -349,7 +319,6 @@ class Post extends Model
             return collect($taxonomy)->values();
         })->collapse()->toArray();
     }
-
     /**
      * Gets the keywords as string.
      *
@@ -359,7 +328,6 @@ class Post extends Model
     {
         return implode(',', (array) $this->keywords);
     }
-
     /**
      * @param string $name The post type slug
      * @param string $class The class to be instantiated
@@ -368,7 +336,6 @@ class Post extends Model
     {
         static::$postTypes[$name] = $class;
     }
-
     /**
      * Clears any registered post types.
      */
@@ -376,7 +343,6 @@ class Post extends Model
     {
         static::$postTypes = [];
     }
-
     /**
      * Get the post format, like the WP get_post_format() function.
      *
@@ -387,16 +353,13 @@ class Post extends Model
         $taxonomy = $this->taxonomies()
             ->where('taxonomy', 'post_format')
             ->first();
-
         if ($taxonomy && $taxonomy->term) {
             return str_replace(
                 'post-format-', '', $taxonomy->term->slug
             );
         }
-
         return false;
     }
-
     /**
      * @param string $key
      * @return mixed
@@ -404,11 +367,9 @@ class Post extends Model
     public function __get($key)
     {
         $value = parent::__get($key);
-
         if ($value === null && !property_exists($this, $key)) {
             return $this->meta->$key;
         }
-
         return $value;
     }
 }
